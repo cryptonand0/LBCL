@@ -1,0 +1,100 @@
+#!/bin/bash
+#Instalacion de bitcoin-core-24.1
+#Colours
+greenColour="\e[0;32m\033[1m"
+endColour="\033[0m\e[0m"
+redColour="\e[0;31m\033[1m"
+blueColour="\e[0;34m\033[1m"
+yellowColour="\e[0;33m\033[1m"
+purpleColour="\e[0;35m\033[1m"
+turquoiseColour="\e[0;36m\033[1m"
+grayColour="\e[0;37m\033[1m"
+
+# Instalando herramientas
+   echo -e "\n${greenColour}[+]${endColour}${blueColour} Bitcoin Core 24.1 ${endColour}"
+   echo -e "\n${greenColour}[+]${endColour}${grayColour} Instalando herramienteas ${endColour}"
+   sudo apt-get install -y bc jq autoconf file gcc libc-dev make g++ pkgconf re2c git libtool automake gcc xxd
+# Descargando bitcoin files
+   echo -e "\n${greenColour}[+]${endColour}${grayColour} Descargando Bitcoin core 24.1${endColour}"
+   wget https://bitcoincore.org/bin/bitcoin-core-24.1/bitcoin-24.1-x86_64-linux-gnu.tar.gz
+   echo -e "\n${greenColour}[+]${endColour}${grayColour} Descargando checksum criptografico ${endColour}"
+   wget https://bitcoincore.org/bin/bitcoin-core-24.1/SHA256SUMS
+   echo -e "\n${greenColour}[+]${endColour}${grayColour} Descargando firmas checksum ${endColour}"
+   wget https://bitcoincore.org/bin/bitcoin-core-24.1/SHA256SUMS.asc
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Descargando la lista de firmas ${endColour}"
+   git clone https://github.com/bitcoin-core/guix.sigs
+# Verificando firmas
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Verificando la lista de checksum ${endColour}"
+   shasum --ignore-missing --check SHA256SUMS
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Importando todas las firmas ${endColour}"
+   gpg --import guix.sigs/builder-keys/*
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Verificando el file checksum con varias firmas ${endColour}"
+   gpg --verify SHA256SUMS.asc
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Terminado verificacion ${endColour}"
+   echo -e "\n${redColur}[!]${endColour}${yellowColour} Para mayor seguridad es necesario verificar con los  respectivos desarrolladores si las firmas son reales ${endColour}"
+# Descomprimiendo paquete bitcoin core
+   echo -e "\n\n${greenColur}[+]${endColour}${grayColour} Descomprimiendo Bitcoin Core 24.1 ${endColour}"
+   tar xzf bitcoin-24.1-x86_64-linux-gnu.tar.gz
+# Limpiando
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Eliminando temp files ${endColour}"
+   rm -r -f SHA256SUMS  SHA256SUMS.asc  bitcoin-24.1-x86_64-linux-gnu.tar.gz  guix.sigs
+# Instalando binarios
+  echo -e "\n${greenColur}[+]${endColour}${grayColour} Instalando Bitcoin Core 24.1 ${endColour}"
+  sudo install -m 0755 -o root -g root -t /usr/local/bin/ bitcoin-24.1/bin/*
+  rm -r -f bitcoin*
+# Creando file bitcoin.nconf
+mkdir $HOME/.bitcoin
+echo -e "regtest=1\nfallbackfee=0.0001\nserver=1\ntxindex=1" > $HOME/bitcoin./bitcoin.conf
+# Iniciando Bitcoin
+# Inicio
+   echo -e "\n${greenColur}[+]${endColour}${grayColour} Iniciando Bitcoin ${endColour}"
+   bitcoind -regtest -daemon
+# Verifica version
+   echo -e "\n${greenColur}[++++++++++++++++++++++++]${endColour}"
+   bitcoind --version | grep version
+   echo -e "\n${greenColur}[++++++++++++++++++++++++]${endColour}"
+# Crea wallet Minero
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Creando wallet Miner y Trader ${endColour}"
+   bitcoin-cli -regtest -named createwallet wallet_name="Miner"
+   walletAddressMinero=$(bitcoin-cli -rpcwallet=Miner getnewaddress "Wallet recompensa de mineria")
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Wallet Minero: $walletAddressMinero ${endColour}"
+# Minado bloques para tener saldo positivo
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Minando 110 bloques...${endColour}"
+   bitcoin-cli generatetoaddress 110 $walletAddressMinero > /dev/null
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Altura de bloque: ${endColour}"
+   bitcoin-cli getblockchaininfo | grep "blocks" | awk '{print $2}' | tr ',' ' '
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Saldo en la wallet Minero: ${endColour}"
+   bitcoin-cli -rpcwallet=Miner getbalance
+# Crea wallet Trader
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} C#rea Wallet Trader${endColour}"
+   bitcoin-cli -regtest -named createwallet wallet_name="Trader"
+   walletAddressTrader=$(bitcoin-cli -rpcwallet=Trader getnewaddress "Wallet del trader")
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Direccion wallet Trader: $walletAddressTrade${endColour}"
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Saldo en la wallet del trader: ${endColour}"
+   bitcoin-cli -rpcwallet=Trader getbalance
+# Transaccion: El Minero envia 20 bitcoin al Trader
+   echo -e "\n${greenColour} -> ${endColour}${redColour} Creando transaccion minero - trader  ${endColour}"
+   txMinerTrader=$(bitcoin-cli -rpcwallet=Miner sendtoaddress $walletAddressTrader 20 "Envio al Trader" )
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Hash de la transaccion: $txMinerTrader: ${endColour}"
+# TX en la mempool
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Transaccion en la mempool: ${endColour}"
+   bitcoin-cli getmempoolentry $txMinerTrader
+# Mina 1 bloque
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Minando otro bloque... ${endColour}"
+   bitcoin-cli generatetoaddress 1 $walletAddressMinero > /dev/null
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Altura de bloque: ${endColour}"
+   bitcoin-cli getblockchaininfo | grep "blocks" | awk '{print $2}' | tr ',' ' '
+# Extrae datos de la TX
+   echo -e "\n${greenColour} -> ${endColour}${grayColour} Transaccion completada: ${endColour}"
+   bitcoin-cli getrawtransaction $txMinerTrader
+
+# Extraer detalles de la transaccion ... 
+# 
+
+
+
+
+
+
+
+
